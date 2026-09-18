@@ -1,7 +1,7 @@
 "use strict";
 
 // ⚠️ 배포 전 반드시 본인의 웹용 OAuth 클라이언트 ID로 교체하세요.
-const CLIENT_ID = "142504911114-cd4q5b94pne4ljqmdse581779ul11d6f.apps.googleusercontent.com";
+const CLIENT_ID = "여기에_발급받은_웹_클라이언트_ID.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/youtube.force-ssl";
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 
@@ -14,26 +14,28 @@ const UNAVAILABLE_TITLE_MARKERS = new Set([
 
 const el = {
   account: document.getElementById("account"),
+
   viewSignedOut: document.getElementById("view-signedout"),
   btnConnect: document.getElementById("btn-connect"),
   signedOutError: document.getElementById("signedout-error"),
 
-  viewPlaylists: document.getElementById("view-playlists"),
+  appLayout: document.getElementById("app-layout"),
+
   btnRefresh: document.getElementById("btn-refresh"),
   playlistList: document.getElementById("playlist-list"),
   playlistsEmpty: document.getElementById("playlists-empty"),
 
-  viewScanning: document.getElementById("view-scanning"),
+  contentEmpty: document.getElementById("content-empty"),
+  contentScanning: document.getElementById("content-scanning"),
   scanStatusText: document.getElementById("scan-status-text"),
   scanProgress: document.getElementById("scan-progress"),
 
-  viewResults: document.getElementById("view-results"),
+  contentResults: document.getElementById("content-results"),
   resultsPlaylistTitle: document.getElementById("results-playlist-title"),
   resultsSummary: document.getElementById("results-summary"),
   resultsClean: document.getElementById("results-clean"),
   resultsList: document.getElementById("results-list"),
   resultsActions: document.getElementById("results-actions"),
-  btnBack: document.getElementById("btn-back"),
   btnSelectAll: document.getElementById("btn-select-all"),
   btnExport: document.getElementById("btn-export"),
   btnDelete: document.getElementById("btn-delete"),
@@ -50,19 +52,24 @@ let state = {
 let tokenClient = null;
 
 // ---------------------------------------------------------------
-// 화면 전환 유틸
+// 콘텐츠 패널 전환 (오른쪽 영역만 바뀜, 사이드바는 항상 고정)
 // ---------------------------------------------------------------
 
-function showView(name) {
-  for (const v of [el.viewSignedOut, el.viewPlaylists, el.viewScanning, el.viewResults]) {
+function showContent(name) {
+  for (const v of [el.contentEmpty, el.contentScanning, el.contentResults]) {
     v.classList.add("hidden");
   }
   ({
-    signedout: el.viewSignedOut,
-    playlists: el.viewPlaylists,
-    scanning: el.viewScanning,
-    results: el.viewResults,
+    empty: el.contentEmpty,
+    scanning: el.contentScanning,
+    results: el.contentResults,
   }[name]).classList.remove("hidden");
+}
+
+function setActivePlaylistItem(playlistId) {
+  el.playlistList.querySelectorAll(".playlist-item").forEach((li) => {
+    li.classList.toggle("active", li.dataset.playlistId === playlistId);
+  });
 }
 
 function showFooterError(message) {
@@ -82,7 +89,7 @@ function initTokenClient() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
-    callback: "", // 요청마다 개별 콜백을 지정
+    callback: "",
   });
 }
 
@@ -134,7 +141,7 @@ async function apiFetch(url, options = {}) {
 }
 
 // ---------------------------------------------------------------
-// 재생목록 목록
+// 재생목록 목록 (사이드바)
 // ---------------------------------------------------------------
 
 async function fetchMyPlaylists() {
@@ -166,6 +173,7 @@ function renderPlaylists(playlists) {
 
     const li = document.createElement("li");
     li.className = "playlist-item";
+    li.dataset.playlistId = pl.id;
     li.innerHTML = `
       <div class="pl-text">
         <span class="pl-title"></span>
@@ -241,8 +249,9 @@ function detectUnavailable(items, existingIds) {
 
 async function scanPlaylist(playlistId, playlistTitle) {
   state.currentPlaylist = { id: playlistId, title: playlistTitle };
+  setActivePlaylistItem(playlistId);
   clearFooterError();
-  showView("scanning");
+  showContent("scanning");
   el.scanStatusText.textContent = "영상 목록 불러오는 중…";
   el.scanProgress.textContent = "";
 
@@ -259,15 +268,15 @@ async function scanPlaylist(playlistId, playlistTitle) {
     state.unavailable = unavailable;
 
     renderResults(playlistTitle, items.length, unavailable);
-    showView("results");
+    showContent("results");
   } catch (err) {
-    showView("playlists");
+    showContent("empty");
     showFooterError(err.message);
   }
 }
 
 // ---------------------------------------------------------------
-// 결과 화면
+// 결과 패널 (오른쪽)
 // ---------------------------------------------------------------
 
 function renderResults(playlistTitle, totalCount, unavailable) {
@@ -360,8 +369,7 @@ function exportCsv() {
 // 초기화 및 이벤트 바인딩
 // ---------------------------------------------------------------
 
-async function loadPlaylistsView() {
-  showView("playlists");
+async function loadPlaylists() {
   el.playlistList.innerHTML = "";
   clearFooterError();
   try {
@@ -383,7 +391,11 @@ async function connect() {
       el.account.textContent = channelTitle;
       el.account.classList.remove("hidden");
     }
-    await loadPlaylistsView();
+
+    el.viewSignedOut.classList.add("hidden");
+    el.appLayout.classList.remove("hidden");
+    showContent("empty");
+    await loadPlaylists();
   } catch (err) {
     el.signedOutError.textContent = err.message;
     el.signedOutError.classList.remove("hidden");
@@ -393,8 +405,7 @@ async function connect() {
 }
 
 el.btnConnect.addEventListener("click", connect);
-el.btnRefresh.addEventListener("click", loadPlaylistsView);
-el.btnBack.addEventListener("click", loadPlaylistsView);
+el.btnRefresh.addEventListener("click", loadPlaylists);
 el.btnExport.addEventListener("click", exportCsv);
 el.btnDelete.addEventListener("click", deleteSelected);
 el.btnSelectAll.addEventListener("click", () => {
