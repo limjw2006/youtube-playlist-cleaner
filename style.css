@@ -162,8 +162,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 12px;
+  padding: 10px 12px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -174,16 +174,48 @@ body {
   border-color: var(--amber-dim);
 }
 
+.pl-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
 .playlist-item .pl-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .playlist-item .pl-count {
   flex-shrink: 0;
   font-size: 12px;
   color: var(--text-dim);
+}
+
+.pl-thumb-wrap {
+  flex-shrink: 0;
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.pl-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pl-thumb-empty {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--border), transparent);
 }
 
 .scan-status {
