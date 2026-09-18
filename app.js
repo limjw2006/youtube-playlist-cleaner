@@ -1,7 +1,7 @@
 "use strict";
 
 // ⚠️ 배포 전 반드시 본인의 웹용 OAuth 클라이언트 ID로 교체하세요.
-const CLIENT_ID = "142504911114-cd4q5b94pne4ljqmdse581779ul11d6f.apps.googleusercontent.com";
+const CLIENT_ID = "여기에_발급받은_웹_클라이언트_ID.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/youtube.force-ssl";
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 
@@ -22,6 +22,7 @@ const el = {
   appLayout: document.getElementById("app-layout"),
 
   btnRefresh: document.getElementById("btn-refresh"),
+  btnToggleThumbs: document.getElementById("btn-toggle-thumbs"),
   playlistList: document.getElementById("playlist-list"),
   playlistsEmpty: document.getElementById("playlists-empty"),
 
@@ -68,6 +69,30 @@ let state = {
 const CACHE_TTL_MS = 30 * 60 * 1000; // 같은 세션이라도 30분 지나면 캐시 무효화
 
 let tokenClient = null;
+
+// ---------------------------------------------------------------
+// 썸네일 표시 여부 (선호도는 이 브라우저에 저장되어 다음 방문에도 유지)
+// ---------------------------------------------------------------
+
+const THUMBS_PREF_KEY = "ytpc-show-thumbs";
+
+function loadThumbsPreference() {
+  const saved = localStorage.getItem(THUMBS_PREF_KEY);
+  const show = saved === null ? true : saved === "true";
+  applyThumbsPreference(show);
+}
+
+function applyThumbsPreference(show) {
+  el.playlistList.classList.toggle("thumbs-hidden", !show);
+  el.btnToggleThumbs.setAttribute("aria-pressed", String(show));
+}
+
+function toggleThumbsPreference() {
+  const currentlyShown = el.btnToggleThumbs.getAttribute("aria-pressed") === "true";
+  const next = !currentlyShown;
+  applyThumbsPreference(next);
+  localStorage.setItem(THUMBS_PREF_KEY, String(next));
+}
 
 // ---------------------------------------------------------------
 // 할당량 사용량 추적 (실제 구글 서버 값이 아니라, 우리가 보낸 호출을 세어
@@ -557,6 +582,7 @@ async function connect() {
 
 el.btnConnect.addEventListener("click", connect);
 el.btnRefresh.addEventListener("click", loadPlaylists);
+el.btnToggleThumbs.addEventListener("click", toggleThumbsPreference);
 el.btnExport.addEventListener("click", exportCsv);
 el.btnRescan.addEventListener("click", () => {
   if (!state.currentPlaylist) return;
@@ -593,6 +619,7 @@ el.quotaResetBtn.addEventListener("click", () => {
 
 // Google Identity Services 스크립트가 로드된 뒤 토큰 클라이언트 초기화
 window.addEventListener("load", () => {
+  loadThumbsPreference();
   if (typeof google === "undefined" || !google.accounts) {
     showFooterError("구글 로그인 스크립트를 불러오지 못했습니다. 새로고침해보세요.");
     return;

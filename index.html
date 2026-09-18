@@ -58,7 +58,13 @@
       <aside class="sidebar">
         <div class="row-between">
           <h2 class="section-title">재생목록</h2>
-          <button id="btn-refresh" class="btn btn-ghost btn-small">새로고침</button>
+          <div class="sidebar-actions">
+            <button id="btn-toggle-thumbs" class="thumb-toggle" type="button" aria-pressed="true">
+              <span class="thumb-toggle-track"><span class="thumb-toggle-knob"></span></span>
+              <span class="thumb-toggle-label">썸네일</span>
+            </button>
+            <button id="btn-refresh" class="btn btn-ghost btn-small">새로고침</button>
+          </div>
         </div>
         <ul id="playlist-list" class="list"></ul>
         <p id="playlists-empty" class="muted hidden">재생목록이 없습니다.</p>
@@ -83,12 +89,6 @@
 
           <p id="results-summary" class="lede"></p>
 
-          <div id="results-clean" class="empty-state hidden">
-            <p>이용 불가 영상이 없습니다.</p>
-          </div>
-
-          <ul id="results-list" class="list hidden"></ul>
-
           <div id="results-actions" class="actions hidden">
             <button id="btn-select-all" class="btn btn-ghost btn-small">전체 선택</button>
             <div class="actions-right">
@@ -96,6 +96,12 @@
               <button id="btn-delete" class="btn btn-danger btn-small">선택 항목 삭제</button>
             </div>
           </div>
+
+          <div id="results-clean" class="empty-state hidden">
+            <p>이용 불가 영상이 없습니다.</p>
+          </div>
+
+          <ul id="results-list" class="list hidden"></ul>
         </div>
       </section>
     </div>

@@ -278,6 +278,65 @@ body {
   background: linear-gradient(135deg, var(--border), transparent);
 }
 
+/* 썸네일 켜기/끄기 토글 */
+.sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thumb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 2px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.thumb-toggle-track {
+  width: 30px;
+  height: 17px;
+  border-radius: 999px;
+  background: var(--border);
+  position: relative;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.thumb-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.thumb-toggle[aria-pressed="true"] .thumb-toggle-track {
+  background: var(--amber-dim);
+}
+
+.thumb-toggle[aria-pressed="true"] .thumb-toggle-knob {
+  transform: translateX(13px);
+  background: var(--amber);
+}
+
+/* 썸네일 숨김 모드: 목록을 더 촘촘하게, 텍스트만 표시 */
+#playlist-list.thumbs-hidden .pl-thumb-wrap {
+  display: none;
+}
+
+#playlist-list.thumbs-hidden .playlist-item {
+  padding: 9px 12px;
+}
+
 .empty-hint {
   height: 100%;
   display: flex;
@@ -351,12 +410,26 @@ body {
 }
 
 .actions {
+  position: sticky;
+  top: -24px;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
+  margin: 0 -28px 16px;
+  padding: 12px 28px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
   gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .actions {
+    top: -18px;
+    margin: 0 -18px 16px;
+    padding: 12px 18px;
+  }
 }
 
 .actions-right {
