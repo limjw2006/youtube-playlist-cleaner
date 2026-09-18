@@ -386,6 +386,137 @@ body {
   flex-shrink: 0;
 }
 
+/* 할당량 위젯 (우측 상단) */
+.quota-widget {
+  position: fixed;
+  top: 68px;
+  right: 16px;
+  width: 208px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  z-index: 100;
+}
+
+.quota-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.quota-title {
+  font-weight: 700;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.quota-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px;
+  line-height: 1;
+}
+
+.quota-icon-btn:hover {
+  color: var(--text);
+}
+
+.quota-bar-track {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.quota-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--ok);
+  border-radius: 4px;
+  transition: width 0.25s ease;
+}
+
+.quota-bar-fill.quota-bar-warn {
+  background: var(--amber);
+}
+
+.quota-bar-fill.quota-bar-danger {
+  background: var(--danger);
+}
+
+.quota-numbers {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.quota-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.quota-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.quota-remaining {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.quota-remaining strong {
+  color: var(--text);
+}
+
+.quota-settings {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quota-settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.quota-settings-label input {
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .quota-widget {
+    position: static;
+    width: auto;
+    margin: 12px 18px 0;
+  }
+}
+
 :root[data-theme="light"] .footer-error {
   color: #7a2c14;
 }

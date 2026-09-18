@@ -1,7 +1,7 @@
 "use strict";
 
 // ⚠️ 배포 전 반드시 본인의 웹용 OAuth 클라이언트 ID로 교체하세요.
-const CLIENT_ID = "142504911114-cd4q5b94pne4ljqmdse581779ul11d6f.apps.googleusercontent.com";
+const CLIENT_ID = "여기에_발급받은_웹_클라이언트_ID.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/youtube.force-ssl";
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 
@@ -36,20 +36,138 @@ const el = {
   resultsClean: document.getElementById("results-clean"),
   resultsList: document.getElementById("results-list"),
   resultsActions: document.getElementById("results-actions"),
+  btnRescan: document.getElementById("btn-rescan"),
   btnSelectAll: document.getElementById("btn-select-all"),
   btnExport: document.getElementById("btn-export"),
   btnDelete: document.getElementById("btn-delete"),
 
   footerError: document.getElementById("footer-error"),
+
+  quotaWidget: document.getElementById("quota-widget"),
+  quotaSettingsBtn: document.getElementById("quota-settings-btn"),
+  quotaBarFill: document.getElementById("quota-bar-fill"),
+  quotaUsed: document.getElementById("quota-used"),
+  quotaTotal: document.getElementById("quota-total"),
+  quotaReadCount: document.getElementById("quota-read-count"),
+  quotaReadUnits: document.getElementById("quota-read-units"),
+  quotaDeleteCount: document.getElementById("quota-delete-count"),
+  quotaDeleteUnits: document.getElementById("quota-delete-units"),
+  quotaRemainingDeletes: document.getElementById("quota-remaining-deletes"),
+  quotaSettings: document.getElementById("quota-settings"),
+  quotaTotalInput: document.getElementById("quota-total-input"),
+  quotaResetBtn: document.getElementById("quota-reset-btn"),
 };
 
 let state = {
   token: null,
   currentPlaylist: null,
   unavailable: [],
+  scanCache: new Map(), // playlistId -> { totalCount, unavailable, scannedAt }
 };
 
+const CACHE_TTL_MS = 30 * 60 * 1000; // 같은 세션이라도 30분 지나면 캐시 무효화
+
 let tokenClient = null;
+
+// ---------------------------------------------------------------
+// 할당량 사용량 추적 (실제 구글 서버 값이 아니라, 우리가 보낸 호출을 세어
+// 추정하는 값입니다. 조회 1유닛 / 삭제 50유닛 기준이며, 유튜브 API가
+// 태평양 시간 자정에 초기화되는 것에 맞춰 날짜를 계산합니다.)
+// ---------------------------------------------------------------
+
+const QUOTA_TOTAL_KEY = "ytpc-quota-total";
+const QUOTA_DAY_PREFIX = "ytpc-quota-day-";
+const DEFAULT_DAILY_QUOTA = 10000;
+
+const quota = {
+  date: null,
+  totalBudget: DEFAULT_DAILY_QUOTA,
+  readCount: 0,
+  readUnits: 0,
+  deleteCount: 0,
+  deleteUnits: 0,
+};
+
+function pacificDateKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function loadQuota() {
+  const savedTotal = localStorage.getItem(QUOTA_TOTAL_KEY);
+  quota.totalBudget = savedTotal ? Number(savedTotal) || DEFAULT_DAILY_QUOTA : DEFAULT_DAILY_QUOTA;
+
+  quota.date = pacificDateKey();
+  try {
+    const raw = localStorage.getItem(QUOTA_DAY_PREFIX + quota.date);
+    const parsed = raw ? JSON.parse(raw) : null;
+    quota.readCount = parsed?.readCount || 0;
+    quota.readUnits = parsed?.readUnits || 0;
+    quota.deleteCount = parsed?.deleteCount || 0;
+    quota.deleteUnits = parsed?.deleteUnits || 0;
+  } catch {
+    quota.readCount = quota.readUnits = quota.deleteCount = quota.deleteUnits = 0;
+  }
+  renderQuotaWidget();
+}
+
+function saveQuotaCounts() {
+  try {
+    localStorage.setItem(
+      QUOTA_DAY_PREFIX + quota.date,
+      JSON.stringify({
+        readCount: quota.readCount,
+        readUnits: quota.readUnits,
+        deleteCount: quota.deleteCount,
+        deleteUnits: quota.deleteUnits,
+      })
+    );
+  } catch {
+    /* 저장 실패해도 화면 표시는 계속 동작 */
+  }
+}
+
+function recordQuotaUsage(kind, units) {
+  const todayKey = pacificDateKey();
+  if (todayKey !== quota.date) {
+    // 태평양 기준 날짜가 바뀌었으면 자동으로 오늘 사용량을 새로 시작
+    quota.date = todayKey;
+    quota.readCount = quota.readUnits = quota.deleteCount = quota.deleteUnits = 0;
+  }
+  if (kind === "delete") {
+    quota.deleteCount += 1;
+    quota.deleteUnits += units;
+  } else {
+    quota.readCount += 1;
+    quota.readUnits += units;
+  }
+  saveQuotaCounts();
+  renderQuotaWidget();
+}
+
+function renderQuotaWidget() {
+  const used = quota.readUnits + quota.deleteUnits;
+  const pct = Math.min(100, Math.round((used / quota.totalBudget) * 100));
+
+  el.quotaUsed.textContent = used.toLocaleString("ko-KR");
+  el.quotaTotal.textContent = quota.totalBudget.toLocaleString("ko-KR");
+  el.quotaBarFill.style.width = `${pct}%`;
+  el.quotaBarFill.classList.toggle("quota-bar-warn", pct >= 70 && pct < 90);
+  el.quotaBarFill.classList.toggle("quota-bar-danger", pct >= 90);
+
+  el.quotaReadCount.textContent = quota.readCount;
+  el.quotaReadUnits.textContent = quota.readUnits.toLocaleString("ko-KR");
+  el.quotaDeleteCount.textContent = quota.deleteCount;
+  el.quotaDeleteUnits.textContent = quota.deleteUnits.toLocaleString("ko-KR");
+
+  const remainingUnits = Math.max(0, quota.totalBudget - used);
+  el.quotaRemainingDeletes.textContent = Math.floor(remainingUnits / 50);
+  el.quotaTotalInput.value = quota.totalBudget;
+}
 
 // ---------------------------------------------------------------
 // 콘텐츠 패널 전환 (오른쪽 영역만 바뀜, 사이드바는 항상 고정)
@@ -114,7 +232,7 @@ function requestAccessToken({ silent } = { silent: false }) {
 // API 호출 (401이면 재로그인 요청 후 1회 재시도)
 // ---------------------------------------------------------------
 
-async function apiFetch(url, options = {}) {
+async function apiFetch(url, options = {}, meta = { units: 1, kind: "read" }) {
   const doFetch = async (token) =>
     fetch(url, {
       ...options,
@@ -135,6 +253,8 @@ async function apiFetch(url, options = {}) {
     const body = await res.text();
     throw new Error(`API 오류 (${res.status}): ${body.slice(0, 200)}`);
   }
+
+  recordQuotaUsage(meta.kind, meta.units);
 
   if (options.method === "DELETE") return null;
   return res.json();
@@ -247,10 +367,20 @@ function detectUnavailable(items, existingIds) {
   return unavailable;
 }
 
-async function scanPlaylist(playlistId, playlistTitle) {
+async function scanPlaylist(playlistId, playlistTitle, { forceRescan = false } = {}) {
   state.currentPlaylist = { id: playlistId, title: playlistTitle };
   setActivePlaylistItem(playlistId);
   clearFooterError();
+
+  // 캐시가 있고 아직 유효하면 API를 호출하지 않고 바로 보여준다 (할당량 절약)
+  const cached = state.scanCache.get(playlistId);
+  if (!forceRescan && cached && Date.now() - cached.scannedAt < CACHE_TTL_MS) {
+    renderResults(playlistTitle, cached.totalCount, cached.unavailable, cached.scannedAt);
+    state.unavailable = cached.unavailable;
+    showContent("results");
+    return;
+  }
+
   showContent("scanning");
   el.scanStatusText.textContent = "영상 목록 불러오는 중…";
   el.scanProgress.textContent = "";
@@ -266,8 +396,13 @@ async function scanPlaylist(playlistId, playlistTitle) {
 
     const unavailable = detectUnavailable(items, existingIds);
     state.unavailable = unavailable;
+    state.scanCache.set(playlistId, {
+      totalCount: items.length,
+      unavailable,
+      scannedAt: Date.now(),
+    });
 
-    renderResults(playlistTitle, items.length, unavailable);
+    renderResults(playlistTitle, items.length, unavailable, Date.now());
     showContent("results");
   } catch (err) {
     showContent("empty");
@@ -279,11 +414,17 @@ async function scanPlaylist(playlistId, playlistTitle) {
 // 결과 패널 (오른쪽)
 // ---------------------------------------------------------------
 
-function renderResults(playlistTitle, totalCount, unavailable) {
+function renderResults(playlistTitle, totalCount, unavailable, scannedAt) {
   el.resultsPlaylistTitle.textContent = playlistTitle;
-  el.resultsSummary.textContent = Number.isNaN(totalCount)
-    ? `이용 불가 영상 ${unavailable.length}개가 남아있습니다.`
-    : `전체 ${totalCount}개 중 이용 불가 영상 ${unavailable.length}개를 찾았습니다.`;
+
+  const scannedNote = scannedAt
+    ? ` (확인 시각 ${new Date(scannedAt).toLocaleTimeString("ko-KR")})`
+    : "";
+  el.resultsSummary.textContent =
+    (Number.isNaN(totalCount)
+      ? `이용 불가 영상 ${unavailable.length}개가 남아있습니다.`
+      : `전체 ${totalCount}개 중 이용 불가 영상 ${unavailable.length}개를 찾았습니다.`) +
+    scannedNote;
 
   el.resultsClean.classList.toggle("hidden", unavailable.length !== 0);
   el.resultsList.classList.toggle("hidden", unavailable.length === 0);
@@ -330,7 +471,7 @@ async function deleteSelected() {
     try {
       const url = new URL(`${API_BASE}/playlistItems`);
       url.searchParams.set("id", itemId);
-      await apiFetch(url.toString(), { method: "DELETE" });
+      await apiFetch(url.toString(), { method: "DELETE" }, { units: 50, kind: "delete" });
     } catch {
       failed.push(itemId);
     }
@@ -339,7 +480,15 @@ async function deleteSelected() {
   state.unavailable = state.unavailable.filter(
     (item) => !selectedIds.includes(item.playlistItemId) || failed.includes(item.playlistItemId)
   );
-  renderResults(state.currentPlaylist.title, Number.NaN, state.unavailable);
+
+  // 캐시도 같이 갱신해서, 나중에 다시 클릭했을 때 이미 지운 영상이 또 보이지 않게 한다
+  const cached = state.scanCache.get(state.currentPlaylist.id);
+  if (cached) {
+    cached.unavailable = state.unavailable;
+    cached.scannedAt = Date.now();
+  }
+
+  renderResults(state.currentPlaylist.title, Number.NaN, state.unavailable, Date.now());
   el.resultsSummary.textContent = `삭제 완료: ${selectedIds.length - failed.length}개. 남은 이용 불가 영상: ${state.unavailable.length}개.`;
   if (failed.length > 0) {
     showFooterError(`${failed.length}개 항목은 삭제에 실패했습니다. 다시 시도해주세요.`);
@@ -394,6 +543,8 @@ async function connect() {
 
     el.viewSignedOut.classList.add("hidden");
     el.appLayout.classList.remove("hidden");
+    el.quotaWidget.classList.remove("hidden");
+    loadQuota();
     showContent("empty");
     await loadPlaylists();
   } catch (err) {
@@ -407,11 +558,37 @@ async function connect() {
 el.btnConnect.addEventListener("click", connect);
 el.btnRefresh.addEventListener("click", loadPlaylists);
 el.btnExport.addEventListener("click", exportCsv);
+el.btnRescan.addEventListener("click", () => {
+  if (!state.currentPlaylist) return;
+  scanPlaylist(state.currentPlaylist.id, state.currentPlaylist.title, {
+    forceRescan: true,
+  });
+});
 el.btnDelete.addEventListener("click", deleteSelected);
 el.btnSelectAll.addEventListener("click", () => {
   const boxes = el.resultsList.querySelectorAll('input[type="checkbox"]');
   const allChecked = Array.from(boxes).every((cb) => cb.checked);
   boxes.forEach((cb) => (cb.checked = !allChecked));
+});
+
+el.quotaSettingsBtn.addEventListener("click", () => {
+  el.quotaSettings.classList.toggle("hidden");
+});
+
+el.quotaTotalInput.addEventListener("change", () => {
+  const value = Number(el.quotaTotalInput.value);
+  if (!value || value <= 0) return;
+  quota.totalBudget = value;
+  localStorage.setItem(QUOTA_TOTAL_KEY, String(value));
+  renderQuotaWidget();
+});
+
+el.quotaResetBtn.addEventListener("click", () => {
+  const confirmed = confirm("오늘 사용량 기록을 0으로 초기화할까요? (실제 구글 할당량이 아니라 이 화면에 표시되는 기록만 초기화됩니다)");
+  if (!confirmed) return;
+  quota.readCount = quota.readUnits = quota.deleteCount = quota.deleteUnits = 0;
+  saveQuotaCounts();
+  renderQuotaWidget();
 });
 
 // Google Identity Services 스크립트가 로드된 뒤 토큰 클라이언트 초기화
