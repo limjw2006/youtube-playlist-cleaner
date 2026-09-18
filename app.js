@@ -1,7 +1,7 @@
 "use strict";
 
 // ⚠️ 배포 전 반드시 본인의 웹용 OAuth 클라이언트 ID로 교체하세요.
-const CLIENT_ID = "142504911114-cd4q5b94pne4ljqmdse581779ul11d6f.apps.googleusercontent.com";
+const CLIENT_ID = "여기에_발급받은_웹_클라이언트_ID.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/youtube.force-ssl";
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 
@@ -159,11 +159,21 @@ function renderPlaylists(playlists) {
   el.playlistsEmpty.classList.toggle("hidden", playlists.length > 0);
 
   for (const pl of playlists) {
+    const thumb =
+      pl.snippet.thumbnails?.medium?.url ||
+      pl.snippet.thumbnails?.default?.url ||
+      "";
+
     const li = document.createElement("li");
     li.className = "playlist-item";
     li.innerHTML = `
-      <span class="pl-title"></span>
-      <span class="pl-count"></span>
+      <div class="pl-text">
+        <span class="pl-title"></span>
+        <span class="pl-count"></span>
+      </div>
+      <div class="pl-thumb-wrap">
+        ${thumb ? `<img class="pl-thumb" src="${thumb}" alt="" loading="lazy" />` : `<div class="pl-thumb pl-thumb-empty"></div>`}
+      </div>
     `;
     li.querySelector(".pl-title").textContent = pl.snippet.title;
     li.querySelector(".pl-count").textContent = `${pl.contentDetails.itemCount}개`;
