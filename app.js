@@ -1,7 +1,7 @@
 "use strict";
 
 // ⚠️ 배포 전 반드시 본인의 웹용 OAuth 클라이언트 ID로 교체하세요.
-const CLIENT_ID = "142504911114-jrai0t1og5nhhd3esceik3vvgbpdngj6.apps.googleusercontent.com";
+const CLIENT_ID = "여기에_발급받은_웹_클라이언트_ID.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/youtube.force-ssl";
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 
@@ -43,20 +43,6 @@ const el = {
   btnDelete: document.getElementById("btn-delete"),
 
   footerError: document.getElementById("footer-error"),
-
-  quotaWidget: document.getElementById("quota-widget"),
-  quotaSettingsBtn: document.getElementById("quota-settings-btn"),
-  quotaBarFill: document.getElementById("quota-bar-fill"),
-  quotaUsed: document.getElementById("quota-used"),
-  quotaTotal: document.getElementById("quota-total"),
-  quotaReadCount: document.getElementById("quota-read-count"),
-  quotaReadUnits: document.getElementById("quota-read-units"),
-  quotaDeleteCount: document.getElementById("quota-delete-count"),
-  quotaDeleteUnits: document.getElementById("quota-delete-units"),
-  quotaRemainingDeletes: document.getElementById("quota-remaining-deletes"),
-  quotaSettings: document.getElementById("quota-settings"),
-  quotaTotalInput: document.getElementById("quota-total-input"),
-  quotaResetBtn: document.getElementById("quota-reset-btn"),
 };
 
 let state = {
@@ -92,106 +78,6 @@ function toggleThumbsPreference() {
   const next = !currentlyShown;
   applyThumbsPreference(next);
   localStorage.setItem(THUMBS_PREF_KEY, String(next));
-}
-
-// ---------------------------------------------------------------
-// 할당량 사용량 추적 (실제 구글 서버 값이 아니라, 우리가 보낸 호출을 세어
-// 추정하는 값입니다. 조회 1유닛 / 삭제 50유닛 기준이며, 유튜브 API가
-// 태평양 시간 자정에 초기화되는 것에 맞춰 날짜를 계산합니다.)
-// ---------------------------------------------------------------
-
-const QUOTA_TOTAL_KEY = "ytpc-quota-total";
-const QUOTA_DAY_PREFIX = "ytpc-quota-day-";
-const DEFAULT_DAILY_QUOTA = 10000;
-
-const quota = {
-  date: null,
-  totalBudget: DEFAULT_DAILY_QUOTA,
-  readCount: 0,
-  readUnits: 0,
-  deleteCount: 0,
-  deleteUnits: 0,
-};
-
-function pacificDateKey() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Los_Angeles",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function loadQuota() {
-  const savedTotal = localStorage.getItem(QUOTA_TOTAL_KEY);
-  quota.totalBudget = savedTotal ? Number(savedTotal) || DEFAULT_DAILY_QUOTA : DEFAULT_DAILY_QUOTA;
-
-  quota.date = pacificDateKey();
-  try {
-    const raw = localStorage.getItem(QUOTA_DAY_PREFIX + quota.date);
-    const parsed = raw ? JSON.parse(raw) : null;
-    quota.readCount = parsed?.readCount || 0;
-    quota.readUnits = parsed?.readUnits || 0;
-    quota.deleteCount = parsed?.deleteCount || 0;
-    quota.deleteUnits = parsed?.deleteUnits || 0;
-  } catch {
-    quota.readCount = quota.readUnits = quota.deleteCount = quota.deleteUnits = 0;
-  }
-  renderQuotaWidget();
-}
-
-function saveQuotaCounts() {
-  try {
-    localStorage.setItem(
-      QUOTA_DAY_PREFIX + quota.date,
-      JSON.stringify({
-        readCount: quota.readCount,
-        readUnits: quota.readUnits,
-        deleteCount: quota.deleteCount,
-        deleteUnits: quota.deleteUnits,
-      })
-    );
-  } catch {
-    /* 저장 실패해도 화면 표시는 계속 동작 */
-  }
-}
-
-function recordQuotaUsage(kind, units) {
-  const todayKey = pacificDateKey();
-  if (todayKey !== quota.date) {
-    // 태평양 기준 날짜가 바뀌었으면 자동으로 오늘 사용량을 새로 시작
-    quota.date = todayKey;
-    quota.readCount = quota.readUnits = quota.deleteCount = quota.deleteUnits = 0;
-  }
-  if (kind === "delete") {
-    quota.deleteCount += 1;
-    quota.deleteUnits += units;
-  } else {
-    quota.readCount += 1;
-    quota.readUnits += units;
-  }
-  saveQuotaCounts();
-  renderQuotaWidget();
-}
-
-function renderQuotaWidget() {
-  const used = quota.readUnits + quota.deleteUnits;
-  const pct = Math.min(100, Math.round((used / quota.totalBudget) * 100));
-
-  el.quotaUsed.textContent = used.toLocaleString("ko-KR");
-  el.quotaTotal.textContent = quota.totalBudget.toLocaleString("ko-KR");
-  el.quotaBarFill.style.width = `${pct}%`;
-  el.quotaBarFill.classList.toggle("quota-bar-warn", pct >= 70 && pct < 90);
-  el.quotaBarFill.classList.toggle("quota-bar-danger", pct >= 90);
-
-  el.quotaReadCount.textContent = quota.readCount;
-  el.quotaReadUnits.textContent = quota.readUnits.toLocaleString("ko-KR");
-  el.quotaDeleteCount.textContent = quota.deleteCount;
-  el.quotaDeleteUnits.textContent = quota.deleteUnits.toLocaleString("ko-KR");
-
-  const remainingUnits = Math.max(0, quota.totalBudget - used);
-  el.quotaRemainingDeletes.textContent = Math.floor(remainingUnits / 50);
-  el.quotaTotalInput.value = quota.totalBudget;
 }
 
 // ---------------------------------------------------------------
@@ -257,7 +143,7 @@ function requestAccessToken({ silent } = { silent: false }) {
 // API 호출 (401이면 재로그인 요청 후 1회 재시도)
 // ---------------------------------------------------------------
 
-async function apiFetch(url, options = {}, meta = { units: 1, kind: "read" }) {
+async function apiFetch(url, options = {}) {
   const doFetch = async (token) =>
     fetch(url, {
       ...options,
@@ -278,8 +164,6 @@ async function apiFetch(url, options = {}, meta = { units: 1, kind: "read" }) {
     const body = await res.text();
     throw new Error(`API 오류 (${res.status}): ${body.slice(0, 200)}`);
   }
-
-  recordQuotaUsage(meta.kind, meta.units);
 
   if (options.method === "DELETE") return null;
   return res.json();
@@ -496,7 +380,7 @@ async function deleteSelected() {
     try {
       const url = new URL(`${API_BASE}/playlistItems`);
       url.searchParams.set("id", itemId);
-      await apiFetch(url.toString(), { method: "DELETE" }, { units: 50, kind: "delete" });
+      await apiFetch(url.toString(), { method: "DELETE" });
     } catch {
       failed.push(itemId);
     }
@@ -568,8 +452,6 @@ async function connect() {
 
     el.viewSignedOut.classList.add("hidden");
     el.appLayout.classList.remove("hidden");
-    el.quotaWidget.classList.remove("hidden");
-    loadQuota();
     showContent("empty");
     await loadPlaylists();
   } catch (err) {
@@ -595,26 +477,6 @@ el.btnSelectAll.addEventListener("click", () => {
   const boxes = el.resultsList.querySelectorAll('input[type="checkbox"]');
   const allChecked = Array.from(boxes).every((cb) => cb.checked);
   boxes.forEach((cb) => (cb.checked = !allChecked));
-});
-
-el.quotaSettingsBtn.addEventListener("click", () => {
-  el.quotaSettings.classList.toggle("hidden");
-});
-
-el.quotaTotalInput.addEventListener("change", () => {
-  const value = Number(el.quotaTotalInput.value);
-  if (!value || value <= 0) return;
-  quota.totalBudget = value;
-  localStorage.setItem(QUOTA_TOTAL_KEY, String(value));
-  renderQuotaWidget();
-});
-
-el.quotaResetBtn.addEventListener("click", () => {
-  const confirmed = confirm("오늘 사용량 기록을 0으로 초기화할까요? (실제 구글 할당량이 아니라 이 화면에 표시되는 기록만 초기화됩니다)");
-  if (!confirmed) return;
-  quota.readCount = quota.readUnits = quota.deleteCount = quota.deleteUnits = 0;
-  saveQuotaCounts();
-  renderQuotaWidget();
 });
 
 // Google Identity Services 스크립트가 로드된 뒤 토큰 클라이언트 초기화
