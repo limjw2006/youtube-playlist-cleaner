@@ -173,11 +173,13 @@ body {
   color: #1a1508;
 }
 
-.policy-link {
-  display: block;
+.policy-links {
   margin-top: 14px;
   text-align: center;
   font-size: 13px;
+}
+
+.policy-link {
   font-weight: 600;
   color: var(--amber);
   text-decoration: underline;
@@ -186,6 +188,11 @@ body {
 
 .policy-link:hover {
   color: var(--text);
+}
+
+.policy-sep {
+  color: var(--text-dim);
+  margin: 0 6px;
 }
 
 .btn-primary:hover {
