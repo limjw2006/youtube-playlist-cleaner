@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>개인정보처리방침 - 재생목록 클리너</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .policy-wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  .policy-wrap h1 {
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  .policy-wrap .updated {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+  .policy-wrap h2 {
+    font-size: 16px;
+    margin-top: 32px;
+    margin-bottom: 8px;
+  }
+  .policy-wrap p, .policy-wrap li {
+    color: var(--text);
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+  .policy-wrap ul {
+    padding-left: 20px;
+  }
+  .policy-wrap a {
+    color: var(--amber);
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="mark"><a href="./" style="color:inherit;text-decoration:none;">재생목록 클리너</a></div>
+  </header>
+
+  <div class="policy-wrap">
+    <h1>개인정보처리방침</h1>
+    <p class="updated">최종 업데이트: 2026년 10월</p>
+
+    <p>
+      '재생목록 클리너'(이하 "본 서비스")는 유튜브 재생목록에서 삭제되거나
+      비공개로 전환되어 더 이상 재생할 수 없는 영상을 찾아 보여주고,
+      사용자가 원할 경우 이를 재생목록에서 제거할 수 있도록 돕는
+      개인용 웹 도구입니다.
+    </p>
+
+    <h2>1. 수집하는 정보</h2>
+    <p>
+      본 서비스는 별도의 서버나 데이터베이스를 운영하지 않습니다.
+      사용자가 구글 계정으로 로그인하면, 브라우저는 구글 로그인(Google
+      Identity Services)을 통해 접근 토큰을 발급받고, 이 토큰으로 YouTube
+      Data API에 다음 정보를 직접 요청합니다.
+    </p>
+    <ul>
+      <li>사용자의 유튜브 채널 이름 (화면 상단에 로그인 확인용으로만 표시)</li>
+      <li>사용자가 소유한 재생목록 목록 및 그 안의 영상 목록</li>
+      <li>각 영상이 삭제되었거나 비공개 상태인지 여부</li>
+    </ul>
+
+    <h2>2. 정보의 저장 및 사용 방식</h2>
+    <p>
+      위 정보는 사용자의 브라우저 안에서만 처리되며, 본 서비스를 운영하는
+      어떠한 서버로도 전송되거나 저장되지 않습니다. 접근 토큰은
+      브라우저 메모리에만 존재하며 탭을 닫으면 사라집니다. 아래 항목만
+      사용자의 브라우저(localStorage)에 남아 다음 방문 시에도 유지됩니다.
+    </p>
+    <ul>
+      <li>오늘 API 호출 횟수를 세어 보여주는 할당량 사용량 숫자 (본인 기기에만 저장)</li>
+      <li>썸네일 표시 여부 등 화면 표시 설정값</li>
+    </ul>
+    <p>
+      이 정보들은 제3자에게 전송, 판매, 공유되지 않으며, 광고나 분석
+      목적으로 사용되지 않습니다.
+    </p>
+
+    <h2>3. 영상 삭제 기능</h2>
+    <p>
+      사용자가 직접 체크박스로 선택하고 "선택 항목 삭제" 버튼을 눌러야만
+      재생목록에서 영상이 제거됩니다. 본 서비스가 사용자의 동의 없이
+      자동으로 영상을 삭제하거나 재생목록을 수정하지 않습니다.
+    </p>
+
+    <h2>4. 권한(스코프) 사용 목적</h2>
+    <p>
+      본 서비스는 구글 OAuth의 <code>youtube.force-ssl</code> 범위를
+      요청합니다. 이는 사용자의 재생목록과 영상 상태를 읽고, 사용자가
+      선택한 항목을 재생목록에서 제거하는 데에만 사용됩니다. 그 외
+      유튜브 계정의 다른 기능(업로드, 댓글, 구독 등)에는 접근하지
+      않습니다.
+    </p>
+
+    <h2>5. 문의</h2>
+    <p>
+      본 서비스 또는 개인정보 처리에 관해 문의할 사항이 있으면
+      아래 이메일로 연락해 주세요.
+    </p>
+    <p>이메일: <a href="mailto:여기에_본인_이메일@example.com">여기에_본인_이메일@example.com</a></p>
+
+    <h2>6. 변경 사항 고지</h2>
+    <p>
+      본 방침이 변경될 경우 이 페이지에 반영하며, 변경 시점은 상단의
+      "최종 업데이트" 날짜로 표시됩니다.
+    </p>
+  </div>
+</body>
+</html>
